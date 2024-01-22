@@ -1,0 +1,60 @@
+﻿@page "/"
+@rendermode InteractiveServer
+
+<PageTitle>Recommend Me!</PageTitle>
+
+@if (_exhaustedTraits) {
+    <h1>No media series matches your preferences!</h1>
+}
+else if (_currentTrait == null)
+{
+	<h1>Loading...</h1>
+}
+else
+{
+	<h1>What do you think about?</h1>
+	<h3>@_currentTrait.Name</h3>
+    <br/>
+    <p>
+        @_currentTrait.Description
+        <a href="@_currentTrait.Url" target="_blank">More Info</a>
+    </p>
+
+    <div style="margin-top: 1rem;">
+        <FluentButton @onclick="() => AnswerMediaTrait(Answer.Yes)" BackgroundColor="#8CAE68" Color="white">Like It</FluentButton>
+        <FluentButton @onclick="() => AnswerMediaTrait(Answer.No)" BackgroundColor="#9E2B25" Color="white">Don't Like It</FluentButton>
+        <FluentButton @onclick="() => AnswerMediaTrait(Answer.DontCare)" BackgroundColor="#333333" Color="white">Don't Care</FluentButton>
+    </div>
+
+    <div style="margin-top: 2rem;">
+        @foreach (var candidate in _candidates)
+        {
+            <a href="@candidate.Url" target="_blank">@candidate.Name</a>
+            <br/>
+        }
+    </div>
+}
+
+@code {
+    private QuestionSession _session = new QuestionSession();
+    private MediaTrait? _currentTrait;
+    private bool _exhaustedTraits = false;
+    private MediaCandidate[] _candidates = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _currentTrait = await _session.GetNewPromptTrait();
+        _candidates = await _session.GetCandidates();
+    }
+
+    public async Task AnswerMediaTrait(Answer ans)
+    {
+        if (_currentTrait == null) return;
+        _session.AnswerPromptTrait(_currentTrait, ans);
+
+        _currentTrait = null; // Show loading 
+        _currentTrait = await _session.GetNewPromptTrait();
+        _exhaustedTraits = _currentTrait == null;
+        if (!_exhaustedTraits) _candidates = await _session.GetCandidates();
+    }
+}
